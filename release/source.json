@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "repository": "https://github.com/gantbd/vellum-semantic-helper-macos",
+  "vellumRepository": "https://github.com/gantbd/vellum",
+  "vellumRevision": null,
+  "vellumSourceQualified": false,
+  "publishing": "none",
+  "signing": "none",
+  "notarization": "none",
+  "activation": "none"
+}

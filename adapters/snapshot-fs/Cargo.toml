@@ -1,0 +1,17 @@
+[package]
+name = "vellum-adapter-semantic-snapshot-fs-macos"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+description = "Descriptor-anchored immutable semantic snapshot materializer for macOS"
+
+[dependencies]
+rustix = { version = "=1.1.4", features = ["fs", "process"] }
+sha2.workspace = true
+vellum-semantic-helper-protocol = { version = "=0.1.0", path = "../../../vellum/protocol/vellum-semantic-helper-protocol" }
+
+[lints]
+workspace = true
