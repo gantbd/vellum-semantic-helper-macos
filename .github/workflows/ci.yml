@@ -1,0 +1,48 @@
+name: Coordinated source qualification
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vellum-semantic-helper-macos-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  macos:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - name: Check out semantic helper peer
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          path: vellum-semantic-helper-macos
+          persist-credentials: false
+      - name: Check out exact Vellum dependency
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: gantbd/vellum
+          ref: 418f4eeb5522309d9245b6d455085bac5cd1f8cd
+          path: vellum
+          persist-credentials: false
+      - name: Check out exact Keystone dependency
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: gantbd/keystone
+          ref: 8a7970cb77e668f3488ecd97dae7c9e765f170cc
+          path: keystone
+          persist-credentials: false
+      - name: Qualify locked semantic helper peer
+        working-directory: vellum-semantic-helper-macos
+        env:
+          CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+          GIT_CONFIG_GLOBAL: ${{ runner.temp }}/vellum-semantic-helper-gitconfig
+          GIT_CONFIG_NOSYSTEM: "1"
+        run: |
+          printf '[url "file://${{ github.workspace }}/keystone"]\n\tinsteadOf = https://github.com/gantbd/keystone\n' > "$GIT_CONFIG_GLOBAL"
+          cargo fetch --locked
+          make check
