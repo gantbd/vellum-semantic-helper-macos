@@ -137,15 +137,13 @@ impl LocalSemanticSnapshotRootV1 {
                     )
                     .map_err(classify_create)?,
                 );
-                // Ledger the exclusive creation before any subsequent write,
-                // synchronization or permission operation can fail.
+                // Ledger the exclusive creation before any subsequent write
+                // or permission operation can fail. This affine snapshot is
+                // not a durable store and makes no crash-persistence claim.
                 files.push(relative.to_owned());
                 let mut descriptor = descriptor;
                 descriptor
                     .write_all(content.as_ref())
-                    .map_err(|_| LocalSemanticSnapshotRefusalV1::Unavailable)?;
-                descriptor
-                    .sync_all()
                     .map_err(|_| LocalSemanticSnapshotRefusalV1::Unavailable)?;
                 fs::fchmod(&descriptor, Mode::from_raw_mode(0o400))
                     .map_err(|_| LocalSemanticSnapshotRefusalV1::Unavailable)?;
