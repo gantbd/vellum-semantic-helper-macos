@@ -88,8 +88,8 @@ impl LocalSemanticSnapshotRootV1 {
         qualify_private_root(&self.directory)?;
         preflight(manifest, contents)?;
         // Acquire every capability needed by the returned lease before the
-        // namespace publication boundary. No fallible construction remains
-        // after a successful no-replace rename.
+        // namespace publication boundary. A post-rename sealing failure rolls
+        // the published name back before any lease can be returned.
         let lease_root = self
             .directory
             .try_clone()
@@ -112,6 +112,7 @@ impl LocalSemanticSnapshotRootV1 {
 
         let mut files = Vec::with_capacity(manifest.entries().len());
         let mut directories = BTreeSet::new();
+        let mut renamed = false;
         let staged = (|| {
             for (entry, content) in manifest.entries().iter().zip(contents) {
                 let relative = entry.path().as_str();
@@ -149,8 +150,6 @@ impl LocalSemanticSnapshotRootV1 {
                     .map_err(|_| LocalSemanticSnapshotRefusalV1::Unavailable)?;
             }
             seal_directories(&stage, &directories)?;
-            fs::fchmod(&stage, Mode::from_raw_mode(0o500))
-                .map_err(|_| LocalSemanticSnapshotRefusalV1::Unavailable)?;
             fs::renameat_with(
                 &self.directory,
                 &stage_name,
@@ -159,11 +158,15 @@ impl LocalSemanticSnapshotRootV1 {
                 RenameFlags::NOREPLACE,
             )
             .map_err(classify_create)?;
+            renamed = true;
+            fs::fchmod(&stage, Mode::from_raw_mode(0o500))
+                .map_err(|_| LocalSemanticSnapshotRefusalV1::Unavailable)?;
             Ok::<(), LocalSemanticSnapshotRefusalV1>(())
         })();
 
         if let Err(error) = staged {
-            if cleanup_tree(&self.directory, &stage_name, &stage, &files, &directories).is_err() {
+            let cleanup_name = if renamed { &final_name } else { &stage_name };
+            if cleanup_tree(&self.directory, cleanup_name, &stage, &files, &directories).is_err() {
                 return Err(LocalSemanticSnapshotRefusalV1::Unavailable);
             }
             return Err(error);
